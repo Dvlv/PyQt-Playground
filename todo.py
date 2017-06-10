@@ -86,7 +86,6 @@ class App(qtw.QWidget):
 
         self.text_input = text_input
 
-        # vertical layout
         self.task_display = TaskDisplayWidget()
 
         # scrolling
@@ -113,7 +112,6 @@ class App(qtw.QWidget):
             self.task_display.addTask(task_text)
             self.text_input.clear()
 
-
     def center(self):
         frameGeometry = self.frameGeometry()
         center = qtw.QDesktopWidget().availableGeometry().center()
@@ -121,8 +119,9 @@ class App(qtw.QWidget):
         self.move(frameGeometry.topLeft())
 
     def resizeEvent(self, event):
-        self.task_display.resize(event.size().width() - 25, 200)
-        self.task_display.setTaskMaxWidths(event.size().width() - 25)
+        new_width = event.size().width() - 25
+        self.task_display.resize(new_width, 200)
+        self.task_display.setTaskMaxWidths(new_width)
 
 
 if __name__ == '__main__':
