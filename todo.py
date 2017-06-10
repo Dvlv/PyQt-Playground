@@ -1,8 +1,14 @@
 import sys
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtGui as qtg
+import PyQt5.QtCore as qtc
 from PyQt5.QtCore import Qt as qt
 
+
+class canvasWidget(qtw.QWidget):
+    def __init__(self, layout):
+        super().__init__()
+        self.setLayout(layout)
 
 class App(qtw.QWidget):
     def __init__(self):
@@ -30,6 +36,7 @@ class App(qtw.QWidget):
         default_task.setStyleSheet(self.colour_schemes[0])
         #default_task.setContentsMargins(0, 0, 0, 0)
         default_task.setAlignment(qt.AlignCenter)
+        default_task.setFixedHeight(100)
 
         self.default_task = default_task
         self.tasks.append(self.default_task)
@@ -48,15 +55,29 @@ class App(qtw.QWidget):
         # vertical layout
         vbox = qtw.QVBoxLayout()
         vbox.setAlignment(qt.AlignTop)
-        vbox.addWidget(self.default_task)
-        vbox.addStretch(1)
-        vbox.addWidget(self.text_input)
-        vbox.addWidget(button)
+        vbox.addWidget(self.default_task, 1)
         vbox.setContentsMargins(0,0,0,0)
-
+        vbox.setSizeConstraint(qtw.QLayout.SetMinAndMaxSize)
         self.vbox = vbox
 
-        self.setLayout(self.vbox)
+        self.cw = canvasWidget(vbox)
+        #self.resize(cw.sizeHint())
+
+        # scrolling
+        self.scrollArea = qtw.QScrollArea(self)
+        self.scrollArea.widgetResizable()
+        #self.scrollArea.setMaximumHeight(300)
+        self.scrollArea.setWidget(self.cw)
+        #self.scrollArea.setLayout(tl)
+        self.scrollArea.setContentsMargins(0, 0, 0, 0)
+
+        self.mainLayout = qtw.QVBoxLayout(self)
+        self.mainLayout.setContentsMargins(0, 0, 0, 0)
+        self.mainLayout.addWidget(self.scrollArea)
+        self.mainLayout.addWidget(self.text_input)
+        self.mainLayout.addWidget(button)
+
+        self.setLayout(self.mainLayout)
 
         self.center()
         self.show()
@@ -66,6 +87,7 @@ class App(qtw.QWidget):
         task = qtw.QLabel(self)
         task.setText(task_text)
         task.setAlignment(qt.AlignCenter)
+        task.setFixedHeight(100)
 
         # choose colour scheme
         _, colour_scheme_choice = divmod(len(self.tasks), 2)
@@ -74,19 +96,18 @@ class App(qtw.QWidget):
 
         # calculate position to insert at
         number_of_widgets = self.vbox.count()
-        for index in range(number_of_widgets):
-            widget = self.vbox.itemAt(index).widget()
-            if isinstance(widget, qtw.QLabel):
-                continue
-            else:
-                self.vbox.insertWidget(index, task)
-                break
+        self.vbox.insertWidget(number_of_widgets+1, task)
+
 
     def center(self):
         frameGeometry = self.frameGeometry()
         center = qtw.QDesktopWidget().availableGeometry().center()
         frameGeometry.moveCenter(center)
         self.move(frameGeometry.topLeft())
+
+    def resizeEvent(self, event):
+        self.cw.resize(event.size().width() - 25, 200)
+
 
 if __name__ == '__main__':
     app = qtw.QApplication(sys.argv)
