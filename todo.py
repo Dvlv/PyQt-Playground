@@ -28,12 +28,7 @@ class TaskDisplayWidget(qtw.QWidget):
         self.maxWidth = 200
 
     def addTask(self, task_text, save_to_db=True):
-        task = qtw.QLabel(self)
-        task.setWordWrap(1)
-        task.setGeometry(0,0,200,100)
-        task.setText(task_text)
-        task.setAlignment(qtc.Qt.AlignCenter)
-        task.setFixedHeight(75)
+        task = TaskLabel(task_text)
         task.mousePressEvent = lambda e: self.deleteTask(task_text)
 
         _, colour_scheme_choice = divmod(len(self.tasks), 2)
@@ -55,17 +50,26 @@ class TaskDisplayWidget(qtw.QWidget):
         number_of_widgets = self.layout.count()
         for index in range(number_of_widgets):
             task_widget = self.layout.itemAt(index).widget()
-            task = task_widget.text()
-            if task == text:
-                task_widget.deleteLater()
-                self.tasks.remove(task_widget)
+
+            if task_widget:
+                task = task_widget.text()
+                if task == text:
+                    self.layout.removeWidget(task_widget)
+                    task_widget.deleteLater()
+                    self.tasks.remove(task_widget)
+                    break
 
         for index in range(len(self.tasks)):
             task_widget = self.layout.itemAt(index).widget()
-            _, colour_scheme_choice = divmod(index, 2)
-            task_widget.setStyleSheet("")
-            #task_widget.setStyleSheet(self.colour_schemes[colour_scheme_choice])
-            print(task_widget, 'colour scheme is', self.colour_schemes[colour_scheme_choice])
+            if isinstance(task_widget, TaskLabel):
+                _, colour_scheme_choice = divmod(index, 2)
+                task_widget.setStyleSheet("background: white;color:black")
+                print(index)
+                task_widget.setStyleSheet(self.colour_schemes[colour_scheme_choice])
+                try:
+                    print(task_widget.text(), 'colour scheme is', self.colour_schemes[colour_scheme_choice])
+                except:
+                    print('qwidget found', self.tasks)
 
 
     def setTaskMaxWidths(self, width):
@@ -82,6 +86,16 @@ class TaskCreateTextEdit(qtw.QTextEdit):
             return super().keyPressEvent(event)
 
 
+class TaskLabel(qtw.QLabel):
+    def __init__(self, task_text):
+        super().__init__()
+        self.setWordWrap(1)
+        self.setGeometry(0,0,200,100)
+        self.setText(task_text)
+        self.setAlignment(qtc.Qt.AlignCenter)
+        self.setFixedHeight(75)
+
+
 class App(qtw.QWidget):
     def __init__(self):
         super().__init__()
@@ -93,18 +107,13 @@ class App(qtw.QWidget):
         self.setWindowTitle(self.title)
         self.setGeometry(10, 10, 300, 400)
 
-        #widgets
-
-        # text input
         text_input = TaskCreateTextEdit(self)
         text_input.setAlignment(qtc.Qt.AlignBottom)
         text_input.setMaximumHeight(75)
+        self.text_input = text_input
 
-        #button
         button = qtw.QPushButton("Create", self)
         button.clicked.connect(self.addTask)
-
-        self.text_input = text_input
 
         self.task_display = TaskDisplayWidget()
 
@@ -185,4 +194,3 @@ if __name__ == '__main__':
     ex = App()
 
     sys.exit(app.exec_())
-
