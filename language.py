@@ -19,6 +19,7 @@ class LanguageTab(qtw.QWidget):
         self.translationLabel = qtw.QLabel()
         self.translationLabel.setText("<Translation Here>")
         self.translationLabel.setSizePolicy(qtw.QSizePolicy(qtw.QSizePolicy.Expanding, qtw.QSizePolicy.Expanding))
+        self.translationLabel.setWordWrap(1)
         self.translationLabel.setAlignment(qtc.Qt.AlignCenter)
 
         self.clipboard_button = qtw.QPushButton("Copy to Clipboard")
@@ -90,15 +91,38 @@ class AddLanguageForm(qtw.QDialog):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSizeConstraint(qtw.QLayout.SetMinAndMaxSize)
 
+        self.languageNameLabel = qtw.QLabel()
+        self.languageNameLabel.setText("Language Name:")
+
         self.languageNameInput = qtw.QLineEdit()
+
+        self.languageShortCodeLabel = qtw.QLabel()
+        self.languageShortCodeLabel.setText("Language Short Code:")
+
         self.languageShortCodeInput = qtw.QLineEdit()
 
+        self.submitButton = qtw.QPushButton("Submit")
+        self.submitButton.clicked.connect(self.submit)
+
+        self.layout.addWidget(self.languageNameLabel)
         self.layout.addWidget(self.languageNameInput)
+        self.layout.addWidget(self.languageShortCodeLabel)
         self.layout.addWidget(self.languageShortCodeInput)
+        self.layout.addWidget(self.submitButton)
 
         self.setLayout(self.layout)
         self.center()
         self.exec_()
+
+    def submit(self):
+        language = self.languageNameInput.text()
+        shortCode = self.languageShortCodeInput.text()
+
+        if language and shortCode:
+            newTab = LanguageTab(language, shortCode)
+            self.parent.mainWidget.addTab(newTab)
+            qtw.QMessageBox.information(self, "Tab Added", language + " tab added")
+            self.destroy()
 
     def center(self):
         frameGeometry = self.frameGeometry()
