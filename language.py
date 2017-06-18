@@ -6,18 +6,18 @@ import PyQt5.QtGui as qtg
 
 
 class LanguageTab(qtw.QWidget):
-    def __init__(self, tab_name):
+    def __init__(self, language, shortCode):
         super().__init__()
-        self.tab_name = tab_name
+        self.language = language
+        self.shortCode = shortCode
 
         self.layout = qtw.QVBoxLayout()
         self.layout.setAlignment(qtc.Qt.AlignTop)
-        self.layout.setContentsMargins(0,0,0,0)
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSizeConstraint(qtw.QLayout.SetMinAndMaxSize)
 
         self.translationLabel = qtw.QLabel()
         self.translationLabel.setText("<Translation Here>")
-        #self.translationLabel.setGeometry(0,0,400,400)
         self.translationLabel.setSizePolicy(qtw.QSizePolicy(qtw.QSizePolicy.Expanding, qtw.QSizePolicy.Expanding))
         self.translationLabel.setAlignment(qtc.Qt.AlignCenter)
 
@@ -34,28 +34,116 @@ class LanguageTab(qtw.QWidget):
         print(tranlation)
 
 
-class App(qtw.QWidget):
-    def __init__(self):
+class EnglishTab(qtw.QWidget):
+    def __init__(self, parent):
         super().__init__()
-        self.title = 'hello'
-        self.initUI()
 
-    def initUI(self):
-        self.setWindowTitle(self.title)
-        self.setGeometry(10, 10, 600, 400)
+        self.language = "English"
+        self.parent = parent
 
         self.layout = qtw.QVBoxLayout()
+        self.layout.setAlignment(qtc.Qt.AlignTop)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSizeConstraint(qtw.QLayout.SetMinAndMaxSize)
 
-        self.tabs = qtw.QTabWidget()
-        self.tabs.resize(300,200)
-        italian_tab = LanguageTab("Italian")
-        self.tabs.addTab(italian_tab, "Italian")
+        self.textInput = qtw.QTextEdit()
+        self.textInput.setSizePolicy(qtw.QSizePolicy(qtw.QSizePolicy.Expanding, qtw.QSizePolicy.Expanding))
 
-        self.layout.addWidget(self.tabs)
+        self.translateButton = qtw.QPushButton("Translate")
+        self.translateButton.clicked.connect(self.translate)
+
+        self.layout.addWidget(self.textInput)
+        self.layout.addWidget(self.translateButton)
+
         self.setLayout(self.layout)
+
+    def translate(self):
+        textToTranslate = self.textInput.toPlainText().strip()
+
+        if textToTranslate:
+            url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl={}&tl={}&dt=t&q={}"
+
+            try:
+                for language in self.parent.languageTabs:
+                    full_url = url.format("en", language.shortCode, textToTranslate)
+                    r = requests.get(full_url)
+                    r.raise_for_status()
+                    translation = r.json()[0][0][0]
+                    language.translationLabel.setText(translation)
+            except Exception as e:
+                qtw.QMessageBox.critical(self, "An error occurred", str(e))
+            else:
+                qtw.QMessageBox.information(self, "Translation Successful", "Text successfully translated!")
+        else:
+            self.textInput.clear()
+
+
+class AddLanguageForm(qtw.QDialog):
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+        self.setWindowTitle("Add New Language")
+        self.setGeometry(0, 0, 200, 130)
+
+        self.layout = qtw.QVBoxLayout()
+        self.layout.setAlignment(qtc.Qt.AlignTop)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSizeConstraint(qtw.QLayout.SetMinAndMaxSize)
+
+        self.languageNameInput = qtw.QLineEdit()
+        self.languageShortCodeInput = qtw.QLineEdit()
+
+        self.layout.addWidget(self.languageNameInput)
+        self.layout.addWidget(self.languageShortCodeInput)
+
+        self.setLayout(self.layout)
+        self.center()
+        self.exec_()
+
+    def center(self):
+        frameGeometry = self.frameGeometry()
+        center = self.parent.frameGeometry().center()
+        frameGeometry.moveCenter(center)
+        self.move(frameGeometry.topLeft())
+
+
+
+class MainWindow(qtw.QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setGeometry(10, 10, 600, 400)
+        self.setWindowTitle("Translation Tool")
+
+        menubar = self.menuBar()
+        self.populateMenuBar(menubar)
+
+
+
+        self.mainWidget = App()
+        self.setCentralWidget(self.mainWidget)
 
         self.center()
         self.show()
+
+    def populateMenuBar(self, menubar):
+        addPortAction = qtw.QAction("Add Portuguese Tab", self)
+        addPortAction.setStatusTip("Adds Portuguese")
+        addPortAction.triggered.connect(self.addPortugueseTab)
+
+        addLanguageAction = qtw.QAction("Add Language", self)
+        addLanguageAction.setStatusTip("Add any language")
+        addLanguageAction.triggered.connect(self.addNewLanguage)
+
+        languagesMenu = menubar.addMenu("&Languages")
+        languagesMenu.addAction(addPortAction)
+        languagesMenu.addAction(addLanguageAction)
+
+    def addPortugueseTab(self):
+        portTab = LanguageTab("Portuguese", "pt")
+        self.mainWidget.addTab(portTab)
+
+    def addNewLanguage(self):
+        AddLanguageForm(self)
 
     def center(self):
         frameGeometry = self.frameGeometry()
@@ -63,8 +151,36 @@ class App(qtw.QWidget):
         frameGeometry.moveCenter(center)
         self.move(frameGeometry.topLeft())
 
+
+class App(qtw.QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.layout = qtw.QVBoxLayout()
+
+        self.languageTabs = []
+
+        self.tabs = qtw.QTabWidget()
+        self.tabs.resize(300,200)
+
+        englishTab = EnglishTab(self)
+        italianTab = LanguageTab("Italian", "it")
+
+        self.tabs.addTab(englishTab, "English")
+
+        self.addTab(italianTab)
+
+        self.layout.addWidget(self.tabs)
+        self.setLayout(self.layout)
+
+    def addTab(self, tab):
+        self.languageTabs.append(tab)
+        self.tabs.addTab(tab, tab.language)
+
 if __name__ == '__main__':
     app = qtw.QApplication(sys.argv)
-    ex = App()
+    ex = MainWindow()
     sys.exit(app.exec_())
 
