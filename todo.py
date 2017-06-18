@@ -64,12 +64,7 @@ class TaskDisplayWidget(qtw.QWidget):
             if isinstance(task_widget, TaskLabel):
                 _, colour_scheme_choice = divmod(index, 2)
                 task_widget.setStyleSheet("background: white;color:black")
-                print(index)
                 task_widget.setStyleSheet(self.colour_schemes[colour_scheme_choice])
-                try:
-                    print(task_widget.text(), 'colour scheme is', self.colour_schemes[colour_scheme_choice])
-                except:
-                    print('qwidget found', self.tasks)
 
 
     def setTaskMaxWidths(self, width):
@@ -89,9 +84,9 @@ class TaskCreateTextEdit(qtw.QTextEdit):
 class TaskLabel(qtw.QLabel):
     def __init__(self, task_text):
         super().__init__()
-        self.setWordWrap(1)
-        self.setGeometry(0,0,200,100)
         self.setText(task_text)
+        self.setWordWrap(1)
+        self.setGeometry(0,0,200,75)
         self.setAlignment(qtc.Qt.AlignCenter)
         self.setFixedHeight(75)
 
