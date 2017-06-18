@@ -63,7 +63,6 @@ class TaskDisplayWidget(qtw.QWidget):
             task_widget = self.layout.itemAt(index).widget()
             if isinstance(task_widget, TaskLabel):
                 _, colour_scheme_choice = divmod(index, 2)
-                task_widget.setStyleSheet("background: white;color:black")
                 task_widget.setStyleSheet(self.colour_schemes[colour_scheme_choice])
 
 
