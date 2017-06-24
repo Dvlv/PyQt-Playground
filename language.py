@@ -31,8 +31,9 @@ class LanguageTab(qtw.QWidget):
         self.setLayout(self.layout)
 
     def copyTranslationToClipboard(self):
-        tranlation = self.translationLabel.text()
-        print(tranlation)
+        translation = self.translationLabel.text()
+        clipboard = qtw.QApplication.clipboard()
+        clipboard.setText(translation)
 
 
 class EnglishTab(qtw.QWidget):
