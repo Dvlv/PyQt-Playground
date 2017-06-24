@@ -142,8 +142,6 @@ class MainWindow(qtw.QMainWindow):
         menubar = self.menuBar()
         self.populateMenuBar(menubar)
 
-
-
         self.mainWidget = App()
         self.setCentralWidget(self.mainWidget)
 
@@ -151,21 +149,21 @@ class MainWindow(qtw.QMainWindow):
         self.show()
 
     def populateMenuBar(self, menubar):
-        addPortAction = qtw.QAction("Add Portuguese Tab", self)
-        addPortAction.setStatusTip("Adds Portuguese")
-        addPortAction.triggered.connect(self.addPortugueseTab)
+        addPortugueseAction = qtw.QAction("Add Portuguese Tab", self)
+        addPortugueseAction.setStatusTip("Adds Portuguese")
+        addPortugueseAction.triggered.connect(self.addPortugueseTab)
 
         addLanguageAction = qtw.QAction("Add Language", self)
         addLanguageAction.setStatusTip("Add any language")
         addLanguageAction.triggered.connect(self.addNewLanguage)
 
         languagesMenu = menubar.addMenu("&Languages")
-        languagesMenu.addAction(addPortAction)
+        languagesMenu.addAction(addPortugueseAction)
         languagesMenu.addAction(addLanguageAction)
 
     def addPortugueseTab(self):
-        portTab = LanguageTab("Portuguese", "pt")
-        self.mainWidget.addTab(portTab)
+        portugueseTab = LanguageTab("Portuguese", "pt")
+        self.mainWidget.addTab(portugueseTab)
 
     def addNewLanguage(self):
         AddLanguageForm(self)
