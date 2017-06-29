@@ -1,8 +1,10 @@
 import sys
-import PyQt5.QtWidgets as qt
+import PyQt5.QtWidgets as qtw
+import PyQt5.QtCore as qtc
+import PyQt5.QtGui as qtg
 
 
-class App(qt.QWidget):
+class App(qtw.QWidget):
     def __init__(self):
         super().__init__()
         self.title = 'hello'
@@ -17,12 +19,12 @@ class App(qt.QWidget):
 
     def center(self):
         frameGeometry = self.frameGeometry()
-        center = qt.QDesktopWidget().availableGeometry().center()
+        center = qtw.QDesktopWidget().availableGeometry().center()
         frameGeometry.moveCenter(center)
         self.move(frameGeometry.topLeft())
 
 if __name__ == '__main__':
-    app = qt.QApplication(sys.argv)
+    app = qtw.QApplication(sys.argv)
     ex = App()
     sys.exit(app.exec_())
 
