@@ -1,5 +1,6 @@
 import sys
 import configparser
+import ntpath
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
@@ -72,6 +73,8 @@ class MainWindow(qtw.QMainWindow):
         if fileToOpen:
             self.fileHandler.fileOpen(fileToOpen)
             self.app.populateSections(self.fileHandler.getSections())
+            fileName = ": ".join([ntpath.basename(fileToOpen), fileToOpen])
+            self.setWindowTitle(fileName)
 
     def fileSave(self):
         pass
@@ -117,6 +120,7 @@ class App(qtw.QWidget):
 
         self.mainLayout.addLayout(self.leftBox)
         self.mainLayout.addLayout(self.rightBox)
+        self.mainLayout.addStretch(1)
 
         self.setLayout(self.mainLayout)
 
