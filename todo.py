@@ -114,7 +114,6 @@ class App(qtw.QWidget):
         # scrolling
         self.scrollArea = qtw.QScrollArea(self)
         self.scrollArea.setVerticalScrollBarPolicy(qtc.Qt.ScrollBarAlwaysOn)
-        self.scrollArea.widgetResizable()
         self.scrollArea.setWidget(self.task_display)
         self.scrollArea.setContentsMargins(0, 0, 0, 0)
 

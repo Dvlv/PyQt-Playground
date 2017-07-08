@@ -46,6 +46,7 @@ class NewDialog(qtw.QDialog):
         password = self.passEntry.text()
 
         self.master.addSite(site, password)
+        self.deleteLater()
 
     def center(self):
         frameGeometry = self.frameGeometry()
@@ -54,49 +55,101 @@ class NewDialog(qtw.QDialog):
         self.move(frameGeometry.topLeft())
 
 
+class Row(qtw.QWidget):
+
+    deletedEvent = qtc.pyqtSignal()
+    FIXED_HEIGHT_CONTANT = 50
+
+    def __init__(self, site):
+        super().__init__()
+        self.site = site
+        self.initUI()
+
+    def initUI(self):
+        self.layout = qtw.QHBoxLayout()
+        self.setFixedHeight(Row.FIXED_HEIGHT_CONTANT)
+
+        self.label = qtw.QLabel()
+        self.label.setText(self.site)
+        self.label.setWordWrap(1)
+
+        self.pwdField = qtw.QLineEdit()
+        self.pwdField.setDisabled(1)
+
+        self.showButton = qtw.QPushButton("Show")
+        self.showButton.clicked.connect(self.showPassword)
+
+        self.copyButton = qtw.QPushButton("Copy")
+        self.copyButton.clicked.connect(self.copyPassword)
+
+        self.removeButton = qtw.QPushButton("Remove")
+        self.removeButton.clicked.connect(self.removePassword)
+
+        self.layout.addWidget(self.label)
+        self.layout.addWidget(self.pwdField)
+        self.layout.addWidget(self.showButton)
+        self.layout.addWidget(self.copyButton)
+        self.layout.addWidget(self.removeButton)
+
+        self.setSizePolicy(qtw.QSizePolicy(qtw.QSizePolicy.Expanding, qtw.QSizePolicy.Expanding))
+
+        self.setLayout(self.layout)
+
+    def showPassword(self):
+        sql = "SELECT thing FROM stuff WHERE site = ?"
+        data = (self.site,)
+        passwords = App.runQuery(sql, data, True)
+        password = passwords[0][0]
+        if password:
+            self.pwdField.setText(password)
+
+    def removePassword(self):
+        sql = "DELETE FROM stuff WHERE site = ?"
+        data = (self.site,)
+        try:
+            App.runQuery(sql, data)
+        except Exception as e:
+            qtw.QMessageBox.critical(self, "Failed", "Delete Failed")
+        else:
+            qtw.QMessageBox.information(self, "Deleted", self.site + " deleted from the database!")
+            self.deletedEvent.emit()
+
+    def copyPassword(self):
+        pass
+
 
 class MainWidget(qtw.QWidget):
+    triggerReloadEvent = qtc.pyqtSignal()
+
     def __init__(self):
         super().__init__()
 
         self.currentRow = 0
 
-        self.layout = qtw.QGridLayout()
-        self.layout.setColumnStretch(0, 200)
-        self.layout.setColumnStretch(1, 600)
-        self.layout.setColumnStretch(2, 200)
-        self.layout.setColumnStretch(3, 200)
+        self.layout = qtw.QVBoxLayout()
         self.setSizePolicy(qtw.QSizePolicy(qtw.QSizePolicy.Expanding, qtw.QSizePolicy.Expanding))
 
         self.setLayout(self.layout)
 
     def addRow(self, site):
-        label = qtw.QLabel()
-        label.setText(site)
-        label.setWordWrap(1)
+        row = Row(site)
+        self.layout.addWidget(row)
+        row.deletedEvent.connect(self.triggerReload)
 
-        pwdField = qtw.QLineEdit()
-        pwdField.setDisabled(1)
+    def addStretch(self):
+        self.layout.addStretch()
 
-        showButton = qtw.QPushButton("Show")
-        showFunction = partial(self.showPassword, site)
-        showButton.clicked.connect(showFunction)
+    def triggerReload(self):
+        self.triggerReloadEvent.emit()
 
-        copyButton = qtw.QPushButton("Copy")
-        copyFunction = partial(self.copyPassword, site)
-        copyButton.clicked.connect(copyFunction)
-
-        self.layout.addWidget(label, self.currentRow, 0)
-        self.layout.addWidget(pwdField, self.currentRow, 1)
-        self.layout.addWidget(showButton, self.currentRow, 2)
-        self.layout.addWidget(copyButton, self.currentRow, 3)
-
-        self.currentRow += 1
-
-    def showPassword(self, site):
-        pass
-    def copyPassword(self, site):
-        pass
+    def clear(self):
+        number_of_widgets = self.layout.count()
+        for index in reversed(range(number_of_widgets)):
+            item = self.layout.takeAt(index)
+            if item:
+                widget = item.widget()
+                if widget:
+                    widget.setParent(None)
 
 
 class App(qtw.QWidget):
@@ -113,6 +166,7 @@ class App(qtw.QWidget):
         self.setGeometry(10, 10, 600, 400)
 
         self.mainWidget = MainWidget()
+        self.mainWidget.triggerReloadEvent.connect(self.reload)
         self.load()
 
         title = qtw.QLabel()
@@ -121,17 +175,18 @@ class App(qtw.QWidget):
         title.setStyleSheet("font-size: 26px;")
 
         addButton = qtw.QPushButton("Add Site")
-        addButton.clicked.connect(self.addSite)
+        addButton.clicked.connect(self.addSiteButtonPressed)
 
         self.scrollArea = qtw.QScrollArea(self)
         #self.scrollArea.setVerticalScrollBarPolicy(qtc.Qt.ScrollBarAlwaysOn)
-        self.scrollArea.widgetResizable()
+        self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setWidget(self.mainWidget)
         self.scrollArea.setContentsMargins(0, 0, 0, 0)
+        self.scrollArea.setSizePolicy(qtw.QSizePolicy(qtw.QSizePolicy.Expanding, qtw.QSizePolicy.Expanding))
 
         self.mainLayout = qtw.QVBoxLayout(self)
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
-        self.mainLayout.setAlignment(qtc.Qt.AlignCenter)
+        self.mainLayout.setAlignment(qtc.Qt.AlignTop)
         self.mainLayout.addWidget(title)
         self.mainLayout.addWidget(self.scrollArea)
         self.mainLayout.addWidget(addButton)
@@ -141,8 +196,21 @@ class App(qtw.QWidget):
         self.center()
         self.show()
 
-    def addSite(self):
+    def addSiteButtonPressed(self):
         NewDialog(self)
+
+    def addSite(self, site, password):
+        sql = "INSERT INTO stuff VALUES (?,?)"
+        data = (site, password)
+        try:
+            self.runQuery(sql, data)
+        except Exception as e:
+            qtw.QMessageBox.critical(self, "Add Failed", str(e))
+        else:
+            qtw.QMessageBox.information(self, "Add Successful", site + " added!")
+
+        self.reload()
+
 
     def load(self):
         sql = "SELECT site FROM stuff"
@@ -150,6 +218,13 @@ class App(qtw.QWidget):
         for site in sites:
             oneSite = site[0]
             self.mainWidget.addRow(oneSite)
+        self.mainWidget.addStretch()
+
+    def reload(self):
+        self.mainWidget.clear()
+        self.load()
+        self.mainWidget.repaint()
+
 
     def center(self):
         frameGeometry = self.frameGeometry()
