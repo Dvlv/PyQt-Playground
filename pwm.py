@@ -95,11 +95,16 @@ class Row(qtw.QWidget):
 
         self.setLayout(self.layout)
 
-    def showPassword(self):
+    def getPassword(self):
         sql = "SELECT thing FROM stuff WHERE site = ?"
         data = (self.site,)
         passwords = App.runQuery(sql, data, True)
         password = passwords[0][0]
+        if password:
+            return password
+
+    def showPassword(self):
+        password = self.getPassword()
         if password:
             self.pwdField.setText(password)
 
@@ -115,7 +120,9 @@ class Row(qtw.QWidget):
             self.deletedEvent.emit()
 
     def copyPassword(self):
-        pass
+        password = self.getPassword()
+        clipboard = qtw.QApplication.clipboard()
+        clipboard.setText(password)
 
 
 class MainWidget(qtw.QWidget):
