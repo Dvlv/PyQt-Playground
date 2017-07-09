@@ -1,6 +1,7 @@
 import sys
 import os
 import sqlite3
+import base64
 from functools import partial
 from Crypto.Cipher import AES
 import PyQt5.QtWidgets as qtw
@@ -22,7 +23,7 @@ class NewDialog(qtw.QDialog):
         self.siteEntry = qtw.QLineEdit()
 
         passLabel = qtw.QLabel()
-        passLabel.setText("Passwsord")
+        passLabel.setText("Password")
 
         self.passEntry = qtw.QLineEdit()
 
@@ -101,7 +102,8 @@ class Row(qtw.QWidget):
         passwords = App.runQuery(sql, data, True)
         password = passwords[0][0]
         if password:
-            return password
+            decrypted_password = App.decryptPassword(password)
+            return decrypted_password.decode()
 
     def showPassword(self):
         password = self.getPassword()
@@ -160,11 +162,12 @@ class MainWidget(qtw.QWidget):
 
 
 class App(qtw.QWidget):
+    key = 'abacus1337abacus'
+    cipher = AES.new(key, AES.MODE_ECB)
+
     def __init__(self):
         super().__init__()
         self.title = 'Password Manager'
-        self.key = 'abacus1337abacus'
-        self.cipher = AES.new(self.key, AES.MODE_ECB)
 
         self.initUI()
 
@@ -207,8 +210,9 @@ class App(qtw.QWidget):
         NewDialog(self)
 
     def addSite(self, site, password):
+        encrypted_password = base64.b64encode(self.cipher.encrypt(password.rjust(32)))
         sql = "INSERT INTO stuff VALUES (?,?)"
-        data = (site, password)
+        data = (site, encrypted_password)
         try:
             self.runQuery(sql, data)
         except Exception as e:
@@ -238,6 +242,10 @@ class App(qtw.QWidget):
         center = qtw.QDesktopWidget().availableGeometry().center()
         frameGeometry.moveCenter(center)
         self.move(frameGeometry.topLeft())
+
+    @staticmethod
+    def decryptPassword(password):
+        return App.cipher.decrypt(base64.b64decode(password))
 
     @staticmethod
     def runQuery(sql, data=None, receive=False):
