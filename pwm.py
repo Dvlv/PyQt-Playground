@@ -6,7 +6,6 @@ from functools import partial
 from Crypto.Cipher import AES
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtCore as qtc
-import PyQt5.QtGui as qtg
 
 class NewDialog(qtw.QDialog):
     def __init__(self, master):
@@ -57,13 +56,13 @@ class NewDialog(qtw.QDialog):
 
 
 class Row(qtw.QWidget):
-
     deletedEvent = qtc.pyqtSignal()
     FIXED_HEIGHT_CONTANT = 50
 
     def __init__(self, site):
         super().__init__()
         self.site = site
+        self.dbh = Dbh("nothing.db")
         self.initUI()
 
     def initUI(self):
@@ -84,7 +83,7 @@ class Row(qtw.QWidget):
         self.copyButton.clicked.connect(self.copyPassword)
 
         self.removeButton = qtw.QPushButton("Remove")
-        self.removeButton.clicked.connect(self.removePassword)
+        self.removeButton.clicked.connect(self.removeSite)
 
         self.layout.addWidget(self.label)
         self.layout.addWidget(self.pwdField)
@@ -97,10 +96,8 @@ class Row(qtw.QWidget):
         self.setLayout(self.layout)
 
     def getPassword(self):
-        sql = "SELECT thing FROM stuff WHERE site = ?"
-        data = (self.site,)
-        passwords = App.runQuery(sql, data, True)
-        password = passwords[0][0]
+        password = self.dbh.getPasswordForSite(self.site)
+
         if password:
             decrypted_password = App.decryptPassword(password)
             return decrypted_password.decode()
@@ -110,13 +107,11 @@ class Row(qtw.QWidget):
         if password:
             self.pwdField.setText(password)
 
-    def removePassword(self):
-        sql = "DELETE FROM stuff WHERE site = ?"
-        data = (self.site,)
+    def removeSite(self):
         try:
-            App.runQuery(sql, data)
+            self.dbh.removeSite(self.site)
         except Exception as e:
-            qtw.QMessageBox.critical(self, "Failed", "Delete Failed")
+            qtw.QMessageBox.critical(self, "Failed", "Delete Failed - " + str(e))
         else:
             qtw.QMessageBox.information(self, "Deleted", self.site + " deleted from the database!")
             self.deletedEvent.emit()
@@ -168,6 +163,7 @@ class App(qtw.QWidget):
     def __init__(self):
         super().__init__()
         self.title = 'Password Manager'
+        self.dbh = Dbh("nothing.db")
 
         self.initUI()
 
@@ -210,11 +206,9 @@ class App(qtw.QWidget):
         NewDialog(self)
 
     def addSite(self, site, password):
-        encrypted_password = base64.b64encode(self.cipher.encrypt(password.rjust(32)))
-        sql = "INSERT INTO stuff VALUES (?,?)"
-        data = (site, encrypted_password)
+        encrypted_password = self.encryptPassword(password)
         try:
-            self.runQuery(sql, data)
+            self.dbh.addSite(site, encrypted_password)
         except Exception as e:
             qtw.QMessageBox.critical(self, "Add Failed", str(e))
         else:
@@ -222,10 +216,8 @@ class App(qtw.QWidget):
 
         self.reload()
 
-
     def load(self):
-        sql = "SELECT site FROM stuff"
-        sites = self.runQuery(sql, None, True)
+        sites = self.dbh.getAllSites()
         for site in sites:
             oneSite = site[0]
             self.mainWidget.addRow(oneSite)
@@ -244,12 +236,50 @@ class App(qtw.QWidget):
         self.move(frameGeometry.topLeft())
 
     @staticmethod
+    def encryptPassword(password):
+        return base64.b64encode(App.cipher.encrypt(password.rjust(32)))
+
+    @staticmethod
     def decryptPassword(password):
         return App.cipher.decrypt(base64.b64decode(password))
 
-    @staticmethod
-    def runQuery(sql, data=None, receive=False):
-        conn = sqlite3.connect("nothing.db")
+
+class Dbh():
+    def __init__(self, dbname):
+        self.dbname = dbname
+
+    def getAllSites(self):
+        sql = "SELECT site FROM stuff"
+        sites = self.runQuery(sql, None, True)
+
+        return sites
+
+    def addSite(self, site, password):
+        sql = "INSERT INTO stuff VALUES (?,?)"
+        data = (site, password)
+        try:
+            self.runQuery(sql, data)
+        except Exception as e:
+            raise
+
+    def removeSite(self, site):
+        sql = "DELETE FROM stuff WHERE site = ?"
+        data = (site,)
+        try:
+            self.runQuery(sql, data)
+        except Exception as e:
+            raise
+
+    def getPasswordForSite(self, site):
+        sql = "SELECT thing FROM stuff WHERE site = ?"
+        data = (site,)
+        passwords = self.runQuery(sql, data, True)
+        password = passwords[0][0]
+
+        return password
+
+    def runQuery(self, sql, data=None, receive=False):
+        conn = sqlite3.connect(self.dbname)
         cursor = conn.cursor()
         if data:
             cursor.execute(sql, data)
@@ -263,15 +293,14 @@ class App(qtw.QWidget):
 
         conn.close()
 
-    @staticmethod
-    def firstTimeDB():
-        create_tables = "CREATE TABLE stuff (site TEXT, thing TEXT)"
-        App.runQuery(create_tables)
+    def firstTimeDB(self):
+        sql = "CREATE TABLE stuff (site TEXT, thing TEXT)"
+        self.runQuery(sql)
 
 
 if __name__ == '__main__':
     if not os.path.isfile("nothing.db"):
-        App.firstTimeDB()
+        Dbh("nothing.db").firstTimeDB()
     app = qtw.QApplication(sys.argv)
     ex = App()
     sys.exit(app.exec_())
